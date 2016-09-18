@@ -27,6 +27,26 @@ namespace Magicodes.T4.Extensions
     public static class T4Extensions
     {
         /// <summary>
+        /// 获取显示名
+        /// </summary>
+        /// <param name="customAttributeProvider"></param>
+        /// <param name="inherit"></param>
+        /// <returns></returns>
+        public static string GetDisplayName(this ICustomAttributeProvider customAttributeProvider, bool inherit = false)
+        {
+            string displayName = null;
+            var displayAttribute = customAttributeProvider.GetAttribute<DisplayAttribute>(false);
+            if (displayAttribute != null) displayName = displayAttribute.Name;
+            else
+            {
+                var displayNameAttribute = customAttributeProvider.GetAttribute<DisplayNameAttribute>(false);
+                if (displayNameAttribute != null)
+                    displayName = displayNameAttribute.DisplayName;
+            }
+            return displayName;
+
+        }
+        /// <summary>
         /// 获取T4生成特性
         /// </summary>
         /// <param name="pro"></param>
@@ -69,6 +89,10 @@ namespace Magicodes.T4.Extensions
                     Name = t4FormGroupAttribute.GroupName
                 };
             }
+
+            var t4SelectAttribute = pro.GetAttribute<T4SelectAttribute>(false);
+            if (t4SelectAttribute != null)
+                t4ProInfo.T4Select = t4SelectAttribute;
             return t4ProInfo;
         }
         /// <summary>
@@ -149,6 +173,12 @@ namespace Magicodes.T4.Extensions
             var isEmail = EmailAddressAttribute != null;
 
             T4DataType? dataType = null;
+            if (GetAttribute<T4SelectAttribute>(pro, false) != null)
+            {
+                dataType = T4DataType.Select;
+                return dataType.Value;
+            }
+
             //数据类型
             var dt = GetAttribute<DataTypeAttribute>(pro, false);
             if (dt != null)

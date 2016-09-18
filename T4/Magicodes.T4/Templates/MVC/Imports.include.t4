@@ -1,0 +1,27 @@
+﻿<#@ include file="$(SolutionDir)\T4\Magicodes.T4\Templates\T4Helper.tt" #>
+<#@ assembly name="System.Core" #>
+<#@ assembly name="System.Data.Linq" #>
+<#@ assembly name="System.Data.Entity" #>
+<#@ assembly name="System.ComponentModel.DataAnnotations" #>
+<#@ assembly name="$(SolutionDir)\T4\Librarys\System.Web.Mvc.dll" #>
+<#@ assembly name="$(SolutionDir)\T4\Librarys\EntityFramework.dll" #>
+<#@ assembly name="$(SolutionDir)\T4\Librarys\EntityFramework.SqlServer.dll" #>
+<#@ assembly name="$(TargetPath)" #>
+<#@ import namespace="System.Data.Linq.Mapping" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Reflection" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="System.Diagnostics" #>
+<#@ import namespace="System.IO" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Web.Mvc" #>
+<#@ import namespace="System.Data.Entity" #>
+<#@ import namespace="System.ComponentModel" #>
+<#@ import namespace="System.ComponentModel.DataAnnotations" #>
+
+<#+
+    string GetValueExpression(T4PropertyInfo property) {
+        //TODO:导航属性判断
+        return property.Name;
+    }
+ #>

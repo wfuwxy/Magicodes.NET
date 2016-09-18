@@ -1,0 +1,25 @@
+﻿<#@ include file="$(SolutionDir)\T4\Magicodes.T4\Templates\T4Helper.tt" #>
+<#@ import namespace="Magicodes.Web.Interfaces.Config" #>
+<#@ import namespace="Magicodes.Web.Interfaces.Config.Info" #>
+<#@ output extension=".cs" encoding="utf-8" #>
+<#
+    var assembly=typeof(SiteConfigInfo).Assembly;
+    var types=assembly.GetTypes().Where(p => p.IsClass && p.IsSubclassOf(typeof(ConfigBase)));
+    var viewDirPath=  Magicodes.T4.Templates.MVC.T4MvcHelper.CreateMvcViewsDirectoryIfNotExist(Host.TemplateFile,"Config");
+    foreach(var config in types)
+    {
+        //是否忽略生成此类
+        var T4GenerationIgnoreAttribute=config.GetAttribute<Magicodes.Web.Interfaces.T4.T4GenerationIgnoreAttribute>(false);
+        if(T4GenerationIgnoreAttribute!=null) continue;
+        var descriptionAttr=config.GetAttribute<System.ComponentModel.DescriptionAttribute>(false);
+        var title=descriptionAttr == null ? "" : descriptionAttr.Description;
+        var typeName=config.Name;
+        var typeFullName=config.FullName;
+        var Propertys=config.GetT4PropertyInfos();
+        #>
+        <#@ include file="$(SolutionDir)\T4\Magicodes.T4\Templates\Config\Views.tt" #>
+<#
+    }
+ #>
+<#@ include file="$(SolutionDir)\T4\Magicodes.T4\Templates\Config\Controller.tt" #>
+

@@ -1,6 +1,6 @@
 ﻿<#@ template language="C#" hostspecific="True" #>
-<#@ output encoding="utf-8" extension=".txt" #>
 <#@ assembly name="System.Xml" #>
+<#@ assembly name="System.Core" #>
 <#@ assembly name="EnvDTE" #>
 <#@ assembly name="Microsoft.VisualStudio.OLE.Interop" #>
 <#@ assembly name="Microsoft.VisualStudio.Shell" #>
@@ -11,28 +11,27 @@
 <#@ import namespace="System.Diagnostics" #>
 <#@ import namespace="System.IO" #>
 <#@ import namespace="System.Text" #>
+<#@ import namespace="System.Linq" #>
 <#@ import namespace="EnvDTE" #>
 <#@ import namespace="System.Xml" #>
+<#@ import namespace="System.Reflection" #>
 <#@ import namespace="Microsoft.VisualStudio.Shell" #>
 <#@ import namespace="Microsoft.VisualStudio.Shell.Interop" #>
 <#@ import namespace="Microsoft.VisualStudio.TextTemplating" #>
 <#@ import namespace="Microsoft.VisualStudio.TextTemplating.VSHost" #>
 <#@ import namespace="Microsoft.VisualStudio.Modeling" #>
+<#    //Magicodes.T4 Begin#>
 <#@ assembly name="$(SolutionDir)\T4\Librarys\Magicodes.T4.dll" #>
 <#@ assembly name="$(SolutionDir)\T4\Librarys\Magicodes.Web.Interfaces.dll" #>
 <#@ import namespace="Magicodes.T4.Models" #>
 <#@ import namespace="Magicodes.T4" #>
 <#@ import namespace="Magicodes.T4.Extensions" #>
 <#@ import namespace="Magicodes.Web.Interfaces.T4" #>
+<#    //Magicodes.T4 End#>
 <#
     initLogPanel();
-    __assemblys=new List<string>(){
-            "Magicodes.T4",
-            "Magicodes.Web.Interfaces"
-            };
  #>
 <#+
-    List<string> __assemblys;
     List<string> __savedOutputs = new List<string>();
     Engine __engine = new Engine();
     Guid customGuid = new Guid("{B4FDE55D-5AB2-454B-982F-7BD067CDEF19}");
@@ -56,10 +55,6 @@
     {
         var sb=new StringBuilder();
         sb.AppendLine("<"+"#"+"@ template debug=\"true\" hostspecific=\"true\" language=\"C#\" #"+">");
-        foreach (var assembly in __assemblys)
-        {
-            sb.Append("<").Append("#").Append("@ assembly name=\"").Append(this.Host.ResolveAssemblyReference(assembly)).Append("\" #").Append(">").AppendLine();
-        }
         sb.AppendLine(File.ReadAllText(templateFilePath,Encoding.UTF8));
         var content=sb.ToString();
         Log(content);
@@ -74,34 +69,15 @@
         //sessionHost.Session = session;
         var sb=new StringBuilder();
         sb.AppendLine("<"+"#"+"@ template debug=\"true\" hostspecific=\"true\" language=\"C#\" #"+">");
-        foreach (var assembly in __assemblys)
-        {
-            sb.Append("<").Append("#").Append("@ assembly name=\"").Append(assembly).Append("\" #").Append(">").AppendLine();
-        }
+        //foreach (var assembly in __assemblys)
+        //{
+        //sb.Append("<").Append("#").Append("@ assembly name=\"").Append(assembly).Append("\" #").Append(">").AppendLine();
+        //}
         sb.AppendLine(File.ReadAllText(templateFilePath,Encoding.UTF8));
         var content=sb.ToString();
         Log(content);        
         return new Engine().ProcessTemplate(content, this.Host);
     }
-    //string ProcessTemplate(string templateFileName,Dictionary<string,dynamic> dic)
-    //{
-    ////string templateDirectory = Path.GetDirectoryName(Host.TemplateFile);
-    ////string template = File.ReadAllText(Host.ResolvePath(templateFileName));
-    //string template = File.ReadAllText(Host.ResolvePath(templateFileName));
-    //IServiceProvider serviceProvider = (IServiceProvider)this.Host; 
-    //ITextTemplating t4 = serviceProvider.GetService(typeof(STextTemplating)) as ITextTemplating;
-    //ITextTemplatingSessionHost host = t4 as ITextTemplatingSessionHost;
-    //host.Session = host.CreateSession();
-    //if(dic!=null)
-    //{
-    //foreach(var key in dic.Keys)
-    //{
-    //host.Session[key]=dic[key];
-    //}
-    //}
-    ////return t4.ProcessTemplate(templateFileName,template);
-    //return __engine.ProcessTemplate(template, Host);  
-    //}
 
     void DeleteOldOutputs()
     {
@@ -144,18 +120,28 @@
 
         __savedOutputs.Add(outputFileName);
     }
-
+    
     void SaveOutput(string outputFileName)
     {
         try
         {
+            
             string templateDirectory = Path.GetDirectoryName(Host.TemplateFile);
-            string outputFilePath = Path.Combine(templateDirectory, outputFileName);
+            string outputFilePath =Path.IsPathRooted(outputFileName)?
+                outputFileName:
+                Path.Combine(templateDirectory, outputFileName);
             //Log("模板目录："+templateDirectory+"\t模板文件路径"+outputFilePath);
             File.WriteAllText(outputFilePath, this.GenerationEnvironment.ToString(),Encoding.UTF8);
             this.GenerationEnvironment = new StringBuilder();
             //DTE dte = ((IServiceProvider)this.Host).GetCOMService(typeof(DTE)) as DTE;  
-            EnvDTE.ProjectItem templateProjectItem = __getTemplateProjectItem();
+
+            EnvDTE.ProjectItem templateProjectItem = null;
+            if(!Path.IsPathRooted(outputFileName))
+                templateProjectItem=  __getTemplateProjectItem();
+            else
+                templateProjectItem = FindFolderInProject(__getTemplateProject().ProjectItems,Path.GetDirectoryName(outputFilePath));
+            if(templateProjectItem==null)
+                templateProjectItem = FindFolderInProject(__getTemplateProject().ProjectItems,new DirectoryInfo(Path.GetDirectoryName(outputFilePath)).Parent.FullName);
             templateProjectItem.ProjectItems.AddFromFile(outputFilePath);
 
             __savedOutputs.Add(outputFileName);
@@ -165,6 +151,29 @@
         {
             this.Error(ex.ToString());
         }
+    }
+    ProjectItem FindFolderInProject(EnvDTE.ProjectItems projectItems, string fullPath)
+    {
+        //Log(fullPath);
+        foreach (ProjectItem item in projectItems)
+        {
+            if(item.Kind== EnvDTE.Constants.vsProjectItemKindPhysicalFolder)
+            {
+                //Log(item.Properties.Item("FullPath").Value.ToString());
+                //Log(item.ProjectItems.Count.ToString());
+                var path= item.Properties.Item("FullPath").Value;
+                //Log(path.ToString());
+                if(path!=null && path.ToString().Trim('\\')==fullPath)
+                    return item;
+                else  if(item.ProjectItems.Count>0)
+                {
+                    var  childItem=FindFolderInProject(item.ProjectItems,fullPath);
+                    if(childItem!=null) 
+                        return childItem;
+                }
+            }
+        }
+        return null;
     }
 
     EnvDTE.ProjectItem __getTemplateProjectItem()

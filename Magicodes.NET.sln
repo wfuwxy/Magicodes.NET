@@ -71,9 +71,17 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Magicodes.T4", "T4\Magicode
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Librarys", "Librarys", "{ABE243F4-C6A7-44C9-9647-E70B9D824844}"
 	ProjectSection(SolutionItems) = preProject
+		T4\Librarys\EntityFramework.dll = T4\Librarys\EntityFramework.dll
+		T4\Librarys\EntityFramework.SqlServer.dll = T4\Librarys\EntityFramework.SqlServer.dll
 		T4\Librarys\Magicodes.T4.dll = T4\Librarys\Magicodes.T4.dll
+		T4\Librarys\Magicodes.Web.Interfaces.dll = T4\Librarys\Magicodes.Web.Interfaces.dll
 		T4\Librarys\Newtonsoft.Json.dll = T4\Librarys\Newtonsoft.Json.dll
+		T4\Librarys\System.Web.Mvc.dll = T4\Librarys\System.Web.Mvc.dll
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Magicodes.Admin", "Plus\Magicodes.Admin\Magicodes.Admin.csproj", "{FCB79998-C325-4C06-8D45-65954B201B67}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "4.Test", "4.Test", "{740CFD59-3C7A-454D-8221-32CE9B8118C4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -165,6 +173,10 @@ Global
 		{04887BBF-5838-4FBE-99C9-C3171CC8971C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{04887BBF-5838-4FBE-99C9-C3171CC8971C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{04887BBF-5838-4FBE-99C9-C3171CC8971C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FCB79998-C325-4C06-8D45-65954B201B67}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FCB79998-C325-4C06-8D45-65954B201B67}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FCB79998-C325-4C06-8D45-65954B201B67}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FCB79998-C325-4C06-8D45-65954B201B67}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -190,5 +202,6 @@ Global
 		{867AA047-FCAE-4023-91CE-0A1E753E3C0F} = {90E639F6-90D9-4D5A-82F2-852FD4C93964}
 		{04887BBF-5838-4FBE-99C9-C3171CC8971C} = {A4779A8E-AC1D-41D5-81A0-1DBE33B73987}
 		{ABE243F4-C6A7-44C9-9647-E70B9D824844} = {A4779A8E-AC1D-41D5-81A0-1DBE33B73987}
+		{FCB79998-C325-4C06-8D45-65954B201B67} = {34176348-4619-429E-85F0-71484A66033B}
 	EndGlobalSection
 EndGlobal

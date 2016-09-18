@@ -12,6 +12,11 @@ using System.Web.Mvc;
 using System.Web.OData.Builder;
 using System.Web.Routing;
 using System.Web.OData.Extensions;
+using Magicodes.Web.Interfaces;
+using System.Web;
+using System.Text.RegularExpressions;
+using Magicodes.Web.Interfaces.Plus.Info;
+using Magicodes.Core.Web.Route;
 
 //======================================================================
 //
@@ -112,44 +117,93 @@ namespace Magicodes.Core.Web
         }
         static void GlobalConfigurationManager_OnConfiguration_Config_MVC(object sender, EventArgs e)
         {
+            //检查MVC插件
+            CheckMvcPlus();
             RouteTable.Routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
-            AreaRegistration.RegisterAllAreas();
-
-           
-            RouteTable.Routes.MapRoute(
-               name: "EditorController",
-               url: "Editor",
-               defaults: new { controller = "Editor", action = "CentreHandler", id = UrlParameter.Optional }
-           );
-            //HttpConfiguration config = (HttpConfiguration)sender;
+            var documentsOpenProtocolManager = GlobalApplicationObject.Current.ApplicationContext.DocumentsOpenProtocolManager;
+            //注册插件路由
             foreach (var mvcPlus in MvcConfigManager.MVCPlusList.OrderByDescending(p => p.MvcPlusType))
             {
-                switch (mvcPlus.MvcPlusType)
+                RouteHelper.MapRouteMVCPlus(mvcPlus);
+                documentsOpenProtocolManager.RegisterDocumentsOpenProtocols(mvcPlus);                
+            }
+            RouteHelper.RouteEnd();
+            
+            AreaRegistration.RegisterAllAreas();
+            RegisterBundlesRequest();
+        }
+        /// <summary>
+        /// 注册插件Bundles请求（只接受以下链接的请求：/{插件名}/bundles/{Bundle名}
+        /// </summary>
+        private static void RegisterBundlesRequest()
+        {
+            #region 注册请求事件，处理插件资源加载问题
+            //注册请求事件，处理插件资源加载问题
+            GlobalApplicationObject.Current.EventsManager.BeginRequest += (requestSender, arg) =>
+            {
+                //应用程序对象
+                var application = (HttpApplication)requestSender;
+                //HTTP上下文对象
+                var context = application.Context;
+                #region 如果非站内请求，随它去吧
+                if (!context.Request.IsLocal)
+                    return;
+                #endregion
+                #region 如果非插件类请求，随它去吧
+                if (!context.Request.Url.AbsolutePath.StartsWith("/Magicodes.", StringComparison.CurrentCultureIgnoreCase))
+                    return;
+                #endregion
+                foreach (var plusItem in MvcConfigManager.MVCPlusList)
                 {
-                    case MvcPlusTypes.MVCHome:
+                    //插件名称
+                    var plusName = plusItem.PlusName;
+                    //插件路径
+                    var plusPath = "/plus/Plugins/" + plusName;
+                    //匹配当前插件路径
+                    if (context.Request.Url.AbsolutePath.StartsWith("/" + plusName + "/", StringComparison.CurrentCultureIgnoreCase))
+                    {
+                        //非bundles路径，则跳转到相应插件目录加载资源
+                        if (!context.Request.Url.AbsolutePath.StartsWith("/" + plusName + "/bundles", StringComparison.CurrentCultureIgnoreCase))
                         {
-                            RouteTable.Routes.MapRoute(
-                                name: "MCV_" + mvcPlus.PlusName,
-                                url: "{controller}/{action}/{id}",
-                                defaults: new { controller = "Home", action = "Index", id = UrlParameter.Optional, pluginName = mvcPlus.PlusName });
+                            var url = Regex.Replace(context.Request.Url.AbsolutePath, "/" + plusName + "/", plusPath + "/", RegexOptions.IgnoreCase);
+                            context.Response.Redirect(url);
                         }
-                        break;
-                    case MvcPlusTypes.MVC:
+                        else
                         {
-                            //var pluginNameSuffix = mvcPlus.PlusName.StartsWith("magicodes.", StringComparison.CurrentCultureIgnoreCase) ? mvcPlus.PlusName.Substring(10) : mvcPlus.PlusName;
-                            RouteTable.Routes.MapRoute(name: "MCV_" + mvcPlus.PlusName, url: "_{pluginName}/{controller}/{action}/{id}", defaults: new { action = "Index", id = UrlParameter.Optional, pluginName = mvcPlus.PlusName });
+                            //如果Accept不为*/*或者text/css（脚本和样式）,则去掉bundles进行跳转
+                            if (!context.Request.AcceptTypes.Any(t => t.Equals("text/css", StringComparison.OrdinalIgnoreCase) || t.Equals("*/*", StringComparison.OrdinalIgnoreCase)))
+                            {
+                                var url = Regex.Replace(context.Request.Url.AbsolutePath, "/" + plusName + "/bundles/", plusPath + "/", RegexOptions.IgnoreCase);
+                                context.Response.Redirect(url);
+                            }
                         }
-                        break;
-                    default:
-                        break;
+                        return;
+                    }
                 }
+            };
+            #endregion
+        }
 
+        
+        /// <summary>
+        /// 检查MVC程序集的正确性
+        /// </summary>
+        private static void CheckMvcPlus()
+        {
+            var count = MvcConfigManager.MVCPlusList.Where(p => p.MvcPlusType == MvcPlusTypes.MVCAdmin).Count();
+            if (count > 1 || count == 0)
+            {
+                throw new MagicodesException(count > 1 ? "后台程序集只允许存在一个" : "当前环境并不存在后台程序集，请下载");
+            }
+            count = MvcConfigManager.MVCPlusList.Where(p => p.MvcPlusType == MvcPlusTypes.MVCHome).Count();
+            if (count > 1 || count == 0)
+            {
+                throw new MagicodesException(count > 1 ? "首页程序集只允许存在一个" : "当前环境并不存在首页程序集，请下载");
             }
         }
         static void GlobalConfigurationManager_OnConfiguration_Config_WEBAPI(object sender, EventArgs e)
         {
             HttpConfiguration config = (HttpConfiguration)sender;
-
             // Web API 配置和服务
             // 将 Web API 配置为仅使用不记名令牌身份验证。
             //config.SuppressDefaultHostAuthentication();

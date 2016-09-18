@@ -19,7 +19,7 @@ using Magicodes.Web.Interfaces.Plus.Info;
 using Magicodes.Web.Interfaces.Strategy;
 using Magicodes.Web.Interfaces.Strategy.Cache;
 using Magicodes.Web.Interfaces.Strategy.Email;
-using Magicodes.Web.Interfaces.Strategy.Sesstion;
+using Magicodes.Web.Interfaces.Strategy.Session;
 using Magicodes.Web.Interfaces.Strategy.SMS;
 using Magicodes.Core.Config;
 using Magicodes.Web.Interfaces.Strategy.User;
@@ -29,6 +29,7 @@ using Magicodes.Core.Web.Mvc;
 using Magicodes.Core.Web;
 using Magicodes.Web.Interfaces.Data.API.SiteNavs;
 using Magicodes.Web.Interfaces.Data.API;
+using Magicodes.Core.DocumentProtocols;
 
 namespace Magicodes.Core
 {
@@ -50,10 +51,10 @@ namespace Magicodes.Core
             GlobalConfigurationManager.Config();
             using (var watch = new CodeWatch("Initialize", 20000))
             {
-                #region 处理插件
+                #region 【废弃】处理插件
                 using (new CodeWatch("LoadPlusAndPlusResource", 5000))
                 {
-                    var taskDoingList = new List<Task>();
+                    //var taskDoingList = new List<Task>();
                     #region 【废弃】加载程序集资源
                     //foreach (var plus in PlusManager.InstalledPluginsList)
                     //{
@@ -155,7 +156,7 @@ namespace Magicodes.Core
             //var appDomain = AppDomain.CreateDomain("Magicodes.Core.Domain", null, setup);
             CurrentAppDomain = AppDomain.CurrentDomain;
             if (!CurrentAppDomain.IsFullyTrusted)
-                throw new MagicodesException("请将当前应用程序信任级别设置为完全信任。");
+                throw new MagicodesException("请将当前应用程序信任级别设置为完全信任");
 
             #endregion
             var binDir = new DirectoryInfo(SitePaths.SiteRootBinDirPath);
@@ -183,24 +184,26 @@ namespace Magicodes.Core
             }
             #endregion
             #region 添加插件菜单
-            var r = APIContext<string>.Current.SiteAdminNavigationRepository;
-            if (r == null) return;
+            var siteAdminNavigationRepository = APIContext<string>.Current.SiteAdminNavigationRepository;
+            if (siteAdminNavigationRepository == null) return;
+            #region 移除所有的插件菜单
+            if (siteAdminNavigationRepository.GetQueryable().Any())
+            {
+                siteAdminNavigationRepository.RemoveRange(siteAdminNavigationRepository.GetQueryable());
+                siteAdminNavigationRepository.SaveChanges();
+            }
+            #endregion
             foreach (var plusInfo in PlusManager.PluginsList)
             {
                 if (plusInfo.PlusConfigInfo != null && plusInfo.PlusConfigInfo.PlusMenus != null && plusInfo.PlusConfigInfo.PlusMenus.Length > 0)
                 {
-                    if (r.GetQueryable().Any(p => p.PlusId == plusInfo.Id))
-                    {
-                        r.RemoveRange(r.GetQueryable().Where(p => p.PlusId == plusInfo.Id));
-                        r.SaveChanges();
-                    }
                     foreach (var plusMenu in plusInfo.PlusConfigInfo.PlusMenus)
                     {
-                        AddPlusMenu(plusInfo, r, plusMenu, null);
+                        AddPlusMenu(plusInfo, siteAdminNavigationRepository, plusMenu, null);
                     }
-                    r.SaveChanges();
                 }
             }
+            siteAdminNavigationRepository.SaveChanges();
             #endregion
         }
         /// <summary>
@@ -258,12 +261,10 @@ namespace Magicodes.Core
             //【优先加载框架策略】加载框架策略作为默认策略，如果插件实现了该策略，则会被覆盖
             //默认集成了日志策略
             PlusManager.LoadPlusStrategys(this.GetType().Assembly);
-            //初始化资源压缩类
-            ResourceMinHelper = new ResourceMinHelper();
             //初始化嵌入资源管理器
             ManifestResourceManager = new ManifestResourceManager();
-            //初始化资源管理辅助类
-            CurrentResourceHelper = new ResourceHelper();
+            //初始化文档协议管理器
+            DocumentsOpenProtocolManager = new DocumentsOpenProtocolManager();
             //初始化配置管理器
             ConfigManager = new ConfigManager();
             //加载程序集
